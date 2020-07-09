@@ -20,9 +20,7 @@ class TestChainPDOFactory {
 
     private $chainPdoFactory = null;
 
-    public function __construct() {
-        $this->chainPdoFactory =  ChainPDOFactory::build(self::$config);
-    }
+    public function __construct() { $this->chainPdoFactory =  ChainPDOFactory::build(self::$config); }
 
     public function testBuild() {
         PunitAssert::assertInstanceof($this->chainPdoFactory, 'ChainPdoFactory');
@@ -43,10 +41,6 @@ class TestChainPDOFactory {
         $db = $this->chainPdoFactory->getDb(1);
         PunitAssert::assertInstanceof($db, 'ChainPDO');
         PunitAssert::assertEquals($db->getConfig()['DB_NAME'], self::$config[1]['DB_NAME']);
-    }
-
-    public function test() {
-        var_dump($this->chainPdoFactory);
     }
 
 }

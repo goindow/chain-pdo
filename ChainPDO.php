@@ -1,14 +1,11 @@
 <?php
 class ChainPDO {
 
-    private $index;
-
     private $config;
 
     private $pdo;
 
-    public function __construct($index, $config) {
-        $this->index = $index;
+    public function __construct($config) {
         $this->config = $config;
         try {
             $this->pdo = new PDO(
@@ -22,8 +19,6 @@ class ChainPDO {
             throw new Exception($e->getMessage());
         }
     }
-
-    public function getIndex() { return $this->index; }
 
     public function getConfig() { return $this->config; }
 

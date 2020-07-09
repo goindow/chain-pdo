@@ -61,9 +61,11 @@ class ChainPDOFactory {
         return $this->dbs[$dbIndex];
     }
 
+    public function getDbs() { return $this->dbs; }
+
     public function getDbsConfig() { return $this->dbsConfig; }
 
-    public function getDbs() { return $this->dbs; }
+    public function getDbsConfigVersion() { return self::$dbsConfigVersion; }
 
     private function __construct($dbsConfig) {
         if (!class_exists("PDO")) throw new Exception('PDO extension not found.');
@@ -106,7 +108,7 @@ class ChainPDOFactory {
     /**
      * 连接数据库
      */
-    private function connect($dbIndex) { return new ChainPDO($dbIndex, $this->dbsConfig[$dbIndex]); }
+    private function connect($dbIndex) { return new ChainPDO($this->dbsConfig[$dbIndex]); }
 
     /**
      * 生成配置版本

@@ -6,7 +6,7 @@ class TestChainPDO {
 
     private static $config = [
         'DB_HOST' => '127.0.0.1',
-        'DB_NAME' => 'test2',
+        'DB_NAME' => 'test1',
         'DB_USERNAME' => 'root',
         'DB_PASSWORD' => '123456'
     ];
@@ -18,6 +18,35 @@ class TestChainPDO {
     public function __construct() {
         $this->chainPdoFactory =  ChainPDOFactory::build(self::$config);
         $this->db = $this->chainPdoFactory->getDb();
+    }
+
+    public function testSql_singleInsert() {
+        $sql = "INSERT INTO `user` (user_name) VALUES ('zhangsan')";
+        $insertId = $this->db->sql($sql);
+        PunitAssert::assertIsString($insertId);
+    }
+
+    public function testSql_multiInsert() {
+        $sql = "INSERT INTO `user` (user_name) VALUES ('lisi'),('wangwu')";
+        $lineCount = $this->db->sql($sql);
+        PunitAssert::assertIsInt($lineCount);
+        PunitAssert::assertStrictEquals($lineCount, 2);
+    }
+
+    public function testSql_update() {
+        $sqlInsert = "INSERT INTO `user` (user_name) VALUES ('zhangsan')";
+        $insertId = $this->db->sql($sqlInsert);
+        $sqlUpdate = "UPDATE `user` SET user_name = 'lisi ' WHERE id = {$insertId}";
+        $lineCount = $this->db->sql($sqlUpdate);
+        PunitAssert::assertEquals($lineCount, 1);
+    }
+
+    public function testSql_delete() {
+        $sqlInsert = "INSERT INTO `user` (user_name) VALUES ('zhangsan')";
+        $insertId = $this->db->sql($sqlInsert);
+        $sqlDelete = "DELETE FROM `user` WHERE id = {$insertId}";
+        $lineCount = $this->db->sql($sqlDelete);
+        PunitAssert::assertEquals($lineCount, 1);
     }
 
 }

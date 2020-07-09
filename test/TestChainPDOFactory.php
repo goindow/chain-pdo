@@ -31,13 +31,13 @@ class TestChainPDOFactory {
         PunitAssert::assertEquals(count($dbs), count(self::$config));
     }
 
-    public function testGetDdDefault() {
+    public function testGetDd_default() {
         $db = $this->chainPdoFactory->getDb();
         PunitAssert::assertInstanceof($db, 'ChainPDO');
         PunitAssert::assertEquals($db->getConfig()['DB_NAME'], self::$config[0]['DB_NAME']);
     }
 
-    public function testGetDdByIndex() {
+    public function testGetDd_byIndex() {
         $db = $this->chainPdoFactory->getDb(1);
         PunitAssert::assertInstanceof($db, 'ChainPDO');
         PunitAssert::assertEquals($db->getConfig()['DB_NAME'], self::$config[1]['DB_NAME']);

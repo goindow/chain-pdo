@@ -23,4 +23,8 @@ class ChainPDO {
         }
     }
 
+    public function getIndex() { return $this->index; }
+
+    public function getConfig() { return $this->config; }
+
 }

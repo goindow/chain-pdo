@@ -17,10 +17,10 @@
 // +--------------------------------------------------------------------------------------
 class Punit {
 
-    // 测试用例目录，只解析当前目录（目录深度一级、不支持迭代解析）的名为 TestXXX.php（规范）
+    // 测试用例目录，只解析当前目录（目录深度一级、不支持迭代解析）的名为 TestXXX.php
     private $caseFilesPath = '';
 
-    // 测试用例文件
+    // 测试用例文件信息
     private $caseFiles = [];
 
     // 测试报告
@@ -45,8 +45,8 @@ class Punit {
      * 报告测试结果
      */
     public function report() {
+        if (empty($this->report['summary']['total'])) exit("No test cases were found.\n");
         $report = '';
-        if (empty($this->report['summary']['total'])) $report = "No test cases were found.\n";
         // list
         foreach ($this->report['list'] as $caseIndex => $caseResult) {
             if ($caseIndex == 0) $report .= "Result    Time          CaseInfo\n"; 
@@ -56,9 +56,9 @@ class Punit {
         $passRate = round($this->report['summary']['pass']/$this->report['summary']['total'], 4) * 100;
         $failRate = 100 - $passRate;
         $report .= "\nPass Rate: " . (empty($this->report['summary']['fail']) ? "\033[32m" : "\033[31m") . "{$passRate}%\033[0m"
-                 . "    Total/Pass/Fail: {$this->report['summary']['total']}/" 
-                              . "\033[32m{$this->report['summary']['pass']}\033[0m/" 
-                              . "\033[31m{$this->report['summary']['fail']}\033[0m"
+                . "    Total/Pass/Fail: {$this->report['summary']['total']}/" 
+                             . "\033[32m{$this->report['summary']['pass']}\033[0m/" 
+                             . "\033[31m{$this->report['summary']['fail']}\033[0m"
                 . "    Time: {$this->report['summary']['time']}\n";
         exit($report);
     }
@@ -68,46 +68,48 @@ class Punit {
      */
     public function run() {
         $beginTime = microtime(true);
-        foreach ($this->caseFiles as $caseFileIndex => $caseFile) { 
-            $this->runCaseFile($caseFileIndex, $caseFile); 
-        }
-        $this->report['summary']['time'] = $this->getTime($beginTime, microtime(true));
+        foreach (array_keys($this->caseFiles) as $caseFileIndex) $this->runCaseFile($caseFileIndex);
+        $this->report['summary']['time'] = $this->getTime($beginTime);
         $this->report();
     }
 
     /**
      * 运行测试文件
      */
-    private function runCaseFile($caseFileIndex, $caseFile) {
-        require($caseFile['file']);
-        $caseFileRefClass = new ReflectionClass($caseFile['class']);
-        $cases = $this->getCases($caseFileIndex, $caseFileRefClass->getMethods(ReflectionMethod::IS_PUBLIC));
-        $this->runCases($caseFileRefClass, $cases);
+    private function runCaseFile($caseFileIndex) {
+        require($this->caseFiles[$caseFileIndex]['file']);
+        $caseFileRefClass = new ReflectionClass($this->caseFiles[$caseFileIndex]['class']);
+        $this->getCases($caseFileIndex, $caseFileRefClass);
+        $this->runCases($caseFileIndex, $caseFileRefClass);
     }
 
     /**
      * 获取测试用例
      */
-    private function getCases($caseFileIndex, $refMethods) {
-        $cases = [];
-        foreach ($refMethods as $refMethod) {
-            // 排除父类的 public 方法
+    private function getCases($caseFileIndex, $caseFileRefClass) {
+        $this->caseFiles[$caseFileIndex]['cases'] = [];
+        foreach ($caseFileRefClass->getMethods(ReflectionMethod::IS_PUBLIC) as $refMethod) {
+            // 排除父类方法
             if ($refMethod->class != $this->caseFiles[$caseFileIndex]['class']) continue;
-            // 排除非 testXXX 开头的 public 方法
-            if (!$this->isStartsWith($refMethod->name, 'test')) continue;
-            array_push($cases, $refMethod);
+            // before
+            if ($refMethod->name === 'before') $this->caseFiles[$caseFileIndex]['aop']['before'] = $refMethod;
+            // after
+            if ($refMethod->name === 'after') $this->caseFiles[$caseFileIndex]['aop']['after'] = $refMethod;
+            // case
+            if ($this->isStartsWith($refMethod->name, 'test')) array_push($this->caseFiles[$caseFileIndex]['cases'], $refMethod);
         }
-        return $cases;
     }
 
     /**
      * 运行所有测试用例
      */
-    private function runCases($caseFileRefClass, $cases) {
-        if (empty($cases)) return;
+    private function runCases($caseFileIndex, $caseFileRefClass) {
+        if (empty($this->caseFiles[$caseFileIndex]['cases'])) return;
         $caseFileObject = $caseFileRefClass->newInstance();
-        foreach ($cases as $case) {
-            $this->runCase($caseFileObject, $case); 
+        foreach (array_keys($this->caseFiles[$caseFileIndex]['cases']) as $caseIndex) {
+            $this->runCaseBefore($caseFileIndex, $caseFileObject);
+            $this->runCase($caseFileIndex, $caseFileObject, $caseIndex); 
+            $this->runCaseAfter($caseFileIndex, $caseFileObject);
         }
     }
 
@@ -116,25 +118,40 @@ class Punit {
      *
      * 只要 testXXX 测试用例抛出异常，失败用例 +1，否则，成功用例 +1（规范）
      */
-    private function runCase($caseFileObject, $case) {
+    private function runCase($caseFileIndex, $caseFileObject, $caseIndex) {
         try {
             $beginTime = microtime(true);
-            $case->invoke($caseFileObject);
-            $this->sum($case, true, $beginTime, microtime(true));
+            $this->caseFiles[$caseFileIndex]['cases'][$caseIndex]->invoke($caseFileObject);
+            $this->setReport($this->caseFiles[$caseFileIndex]['cases'][$caseIndex], true, $this->getTime($beginTime));
         } catch (Exception $e) {
-            $this->sum($case, false, $beginTime, microtime(true), $e->getMessage());
+            $this->setReport($this->caseFiles[$caseFileIndex]['cases'][$caseIndex], false, $this->getTime($beginTime), $e->getMessage());
         }
+    }
+
+    /**
+     * 运行测试用例前
+     */
+    private function runCaseBefore($caseFileIndex, $caseFileObject) {
+        if (empty($this->caseFiles[$caseFileIndex]['aop']['before'])) return;
+        $this->caseFiles[$caseFileIndex]['aop']['before']->invoke($caseFileObject);
+    }
+
+    /**
+     * 运行测试用例前
+     */
+    private function runCaseAfter($caseFileIndex, $caseFileObject) {
+        if (empty($this->caseFiles[$caseFileIndex]['aop']['after'])) return;
+        $this->caseFiles[$caseFileIndex]['aop']['after']->invoke($caseFileObject);
     }
 
     /**
      * 汇总测试报告
      */
-    private function sum($case, $result, $beginTime, $endTime, $exception = '') {
+    private function setReport($case, $result, $time, $exception = '') {
         // 汇总报告
         $this->report['summary']['total']++;
         $result ? $this->report['summary']['pass']++ : $this->report['summary']['fail']++;
         // 记录明细
-        $time = $this->getTime($beginTime, $endTime);
         array_push($this->report['list'], [
             "toString"  => ($result ? "\033[32mpass\033[0m" : "\033[31mfail\033[0m") . "      {$time}      {$case->class}.{$case->name}() {$exception}",
             "class"     => $case->class, 
@@ -166,7 +183,10 @@ class Punit {
         }
     }
 
-    private function getTime($beginTime, $endTime) { return sprintf("%.4f", ($endTime - $beginTime) * 1000) . 'ms'; }
+    /**
+     * 计算运行时间
+     */
+    private function getTime($time) { return sprintf("%.4f", (microtime(true) - $time) * 1000) . 'ms'; }
 
     /**
      * 判断字符串 $string 是否是以 $startStr 开头

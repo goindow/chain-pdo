@@ -79,9 +79,9 @@ class ChainPDOFactory {
         // 配置版本信息
         self::$dbsConfigVersion = self::geneateDbsConfigVersion($dbsConfig);
         // 单数据库
-        if ($this->is_assoc($dbsConfig)) { $this->connector(0, $dbsConfig); return; }
+        if (ChainPDO::is_assoc($dbsConfig)) { $this->connector(0, $dbsConfig); return; }
         // 多数据库
-        foreach ($dbsConfig as $dbIndex => $dbConfig) { $this->connector($dbIndex, $dbConfig); }
+        foreach ($dbsConfig as $dbIndex => $dbConfig) $this->connector($dbIndex, $dbConfig);
     }
 
     /**
@@ -114,11 +114,6 @@ class ChainPDOFactory {
      * 生成配置版本
      */
     private static function geneateDbsConfigVersion($dbsConfig) { return md5(serialize($dbsConfig)); }
-
-    /**
-     * 判断是否是关联数组
-     */
-    private function is_assoc($array) { return array_diff_assoc(array_keys($array), range(0, count($array) - 1)) ? true : false; }
 
     private function __clone() {}
     

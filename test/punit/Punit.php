@@ -168,7 +168,7 @@ class Punit {
     private function getCaseFiles() {
         if (is_dir($this->caseFilesPath)) {
             if ($dh = opendir($this->caseFilesPath)) {
-                while (($file = readdir($dh)) !== false) { $this->pushCaseFile($file); }
+                while (($file = readdir($dh)) !== false) $this->pushCaseFile($file);
                 closedir($dh);
             }
         }

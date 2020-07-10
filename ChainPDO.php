@@ -33,10 +33,11 @@ class ChainPDO {
     
     /**
      * 原生支持
-     * INSERT
-     *   1.如果是批量插入，返回插入行数（int）
-     *   2.如果是单行插入，且能获取到插入 id，返回插入 id（string）
-     *   3.如果是单行插入，不能获取到插入 id，返回插入行数（int）
+     * INSERT 返回情况如下
+     *  1.如果是批量插入，返回插入行数（int）
+     *  2.如果是单行插入，且能获取到插入 id，返回插入 id（string）
+     *  3.如果是单行插入，不能获取到插入 id，返回插入行数（int）
+     * UPDATE、DELETE 返回影响行数
      */
     public function sql($sql) { return $this->is_select($sql) ? $this->query($sql) : $this->execute($sql); }
 
@@ -58,7 +59,12 @@ class ChainPDO {
      * 查
      */
     private function query($sql) {
-
+        $this->clean();
+        $this->sql = trim($sql);
+        $this->stmt = $this->pdo->prepare($this->sql);
+        $this->stmt->execute();
+        $this->hasError();
+        return $this->stmt->fetchAll(constant("PDO::FETCH_ASSOC"));
     }
 
 

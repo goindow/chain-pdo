@@ -20,16 +20,18 @@ class TestChainPDO {
         $this->db = $this->chainPdoFactory->getDb();
     }
 
+    public function before() { $this->db->sql("DELETE FROM `user`"); }
+
     public function testSql_singleInsert() {
         $sql = "INSERT INTO `user` (user_name) VALUES ('zhangsan')";
         $insertId = $this->db->sql($sql);
-        PunitAssert::assertIsString($insertId);
+        PunitAssert::assertString($insertId);
     }
 
     public function testSql_multiInsert() {
         $sql = "INSERT INTO `user` (user_name) VALUES ('lisi'),('wangwu')";
         $lineCount = $this->db->sql($sql);
-        PunitAssert::assertIsInt($lineCount);
+        PunitAssert::assertInt($lineCount);
         PunitAssert::assertStrictEquals($lineCount, 2);
     }
 
@@ -48,5 +50,15 @@ class TestChainPDO {
         $lineCount = $this->db->sql($sqlDelete);
         PunitAssert::assertEquals($lineCount, 1);
     }
+
+    public function testSql_select() {
+        $sqlInsertMulti = "INSERT INTO `user` (user_name) VALUES ('zhangsan'),('lisi'),('wangwu')";
+        $this->db->sql($sqlInsertMulti);
+        $sqlSelect = "SELECT id FROM `user`";
+        $users = $this->db->sql($sqlSelect);
+        PunitAssert::assertEquals(count($users), 3);
+    }
+
+    // todo: before() & after() 
 
 }

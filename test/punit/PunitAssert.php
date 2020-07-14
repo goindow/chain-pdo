@@ -13,6 +13,6 @@ class PunitAssert {
 
     public static function assertGt($var1, $var2) { if (!($var1 > $var2)) self::fail(__FUNCTION__); }
 
-    private static function fail($funcName) { throw new Exception("${funcName} fali."); }
+    private static function fail($funcName) { throw new Exception("${funcName} fail."); }
 
 }

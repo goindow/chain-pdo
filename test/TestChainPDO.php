@@ -103,7 +103,7 @@ class TestChainPDO {
         PunitAssert::assertStrictEquals($sql, 'INSERT INTO user  (`user_name`) VALUES ("zhangsan")');
     }
 
-    public function testInsert_fail_param1Missing() {
+    public function testInsert_fail_dataParam1Missing() {
         try {
             $result = $this->db->insert('user');
         } catch (Exception $e) {
@@ -111,7 +111,7 @@ class TestChainPDO {
         }
     }
 
-    public function testInsert_fail_param1TypeError_array() {
+    public function testInsert_fail_dataParam1TypeError_array() {
         try {
             $result = $this->db->data("zhangsan")->insert('user');
         } catch (Exception $e) {
@@ -119,7 +119,7 @@ class TestChainPDO {
         }
     }
 
-    public function testInsert_single_fail_param1TypeError_assocArray() {
+    public function testInsert_single_fail_dataParam1TypeError_assocArray() {
         try {
             $result = $this->db->data([['user_name' => 'zhangsan']])->insert('user');
         } catch (Exception $e) {
@@ -209,14 +209,71 @@ class TestChainPDO {
 
     public function testDelete_withOrder() {
         $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
-        $result = $this->db->order('id desc')->limit(1)->delete('user');
-        PunitAssert::assertStrictEquals($result, 1); // 'wangwu' was deleter
+        $result = $this->db->order('id desc')->limit(1)->delete('user');    // 'wangwu' was deleted
+        PunitAssert::assertStrictEquals($result, 1);
         // todo: assert 'wangwu' was deleted
     }
 
     public function testDelete() {
         $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
         $result = $this->db->delete('user');
+        PunitAssert::assertStrictEquals($result, 3);
+    }
+
+    /************************    链式 UPDATE   ************************/
+
+    public function testUpdate_fail_dataMissing() {
+        try {
+            $result = $this->db->update('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data missing first parameter.');
+        }
+    }
+
+    public function testUpdate_fail_dataTypeError_array() {
+        try {
+            $result = $this->db->data("zhangsan")->update('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the first parameter must be an array.');
+        }
+    }
+    public function testUpdate_withWhereArray() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['lisi']])->insert('user');
+        $result = $this->db->where(['user_name' => 'lisi'])->data(['user_name' => 'zhaoliu'])->update('user');
+        PunitAssert::assertStrictEquals($result, 2);
+    }
+
+    public function testUpdate_withWhereString() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->where("user_name = 'zhangsan'")->data(['user_name' => 'zhaoliu'])->update('user');
+        PunitAssert::assertStrictEquals($result, 1);
+    }
+
+    public function testUpdate_withLimit_fail_limitTypeError() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        try {
+            $result = $this->db->data(['user_name' => 'zhaoliu'])->limit('2, 1')->update('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Limit type error, must be an integer.');
+        }
+    }
+
+    public function testUpdate_withLimit() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->data(['user_name' => 'zhaoliu'])->limit(1)->update('user');    // 'zhangsan' was updated
+        PunitAssert::assertStrictEquals($result, 1);
+    }
+
+    public function testUpdate_withOrder() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->data(['user_name' => 'zhaoliu'])->order('id desc')->limit(1)->update('user');    // 'wangwu' was updated
+        PunitAssert::assertStrictEquals($result, 1);
+        // todo: assert 'wangwu' was updated
+    }
+
+    public function testUpdate() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->data(['user_name' => 'zhaoliu'])->update('user');
         PunitAssert::assertStrictEquals($result, 3);
     }
 

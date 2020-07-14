@@ -126,7 +126,7 @@ class ChainPDO {
     public function delete($table, $onlyReturnSql = false) {
         $sql = "DELETE FROM {$table} " . $this->parseWhere()
                                        . $this->parseOrder()
-                                       . $this->parseLimitForDelete();
+                                       . $this->parseLimitForUD();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
@@ -140,7 +140,7 @@ class ChainPDO {
         $sql = "UPDATE {$table} SET " . $this->parseDataForUpdate()
                                       . $this->parseWhere()
                                       . $this->parseOrder()
-                                      . $this->parseLimit();
+                                      . $this->parseLimitForUD();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
@@ -217,16 +217,16 @@ class ChainPDO {
     private function parseJoin() { if (!empty($this->options['join'])) return ' ' . $this->options['join']; }
 
     /**
-     * limit 解析 - !DELETE
+     * limit 解析 - !(UPDATE/DELETE)
      */
     private function parseLimit() { if (!empty($this->options['limit'])) return ' LIMIT ' . trim($this->options['limit']); }
 
     /**
-     * limit 解析 - DELETE
+     * limit 解析 - UPDATE/DELETE
      * 
-     * DELETE 语句必须是 int，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
+     * UPDATE/DELETE 语句必须是 int，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
      */
-    private function parseLimitForDelete() { 
+    private function parseLimitForUD() { 
         if (empty($this->options['limit'])) return;
         if (!is_int($this->options['limit'])) throw new Exception('Limit type error, must be an integer.');
         return ' LIMIT ' . trim($this->options['limit']);
@@ -271,6 +271,7 @@ class ChainPDO {
     private function parseDataForUpdate() {
         if (empty($this->options['data']['dataOrFields'])) throw new Exception('Data missing first parameter.');
         $this->ensureArray($this->options['data']['dataOrFields'], 'the first');
+        $this->ensureAssocArray($this->options['data']['dataOrFields'], 'the first');
         $data = [];
         foreach ($this->options['data']['dataOrFields'] as $k => $v) array_push($data, $this->addSpecialChar($k) . ' = "'  .$v . '"');
         return implode(',', $data);

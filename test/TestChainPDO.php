@@ -103,26 +103,68 @@ class TestChainPDO {
         PunitAssert::assertStrictEquals($sql, 'INSERT INTO user  (`user_name`) VALUES ("zhangsan")');
     }
 
-    public function testInsert_fail_dataMissing() {
+    public function testInsert_fail_param1Missing() {
         try {
             $result = $this->db->insert('user');
         } catch (Exception $e) {
-            PunitAssert::assertStrictEquals($e->getMessage(), 'Missing data or type error.');
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data missing first parameter.');
         }
     }
 
-    public function testInsert_fail_dataTypeError() {
+    public function testInsert_fail_param1TypeError_array() {
         try {
             $result = $this->db->data("zhangsan")->insert('user');
         } catch (Exception $e) {
-            PunitAssert::assertStrictEquals($e->getMessage(), 'Missing data or type error.');
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the first parameter must be an array.');
+        }
+    }
+
+    public function testInsert_single_fail_param1TypeError_assocArray() {
+        try {
+            $result = $this->db->data([['user_name' => 'zhangsan']])->insert('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the first parameter must be an associative array.');
         }
     }
 
     public function testInsert_single() {
-        $user = ['user_name' => 'zhangsan'];
+        $user = [
+            'user_name' => 'zhangsan'
+        ];
         $result = $this->db->data($user)->insert('user');
         PunitAssert::assertGt($result, 0);
+    }
+
+    public function testInsert_multi_fail_dataParam1TypeError_normalArray() {
+        try {
+            $result = $this->db->data(['user_nmae' => 'zhangsan'], ['zhangsan', 'lisi'])->insert('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the first parameter must be an normal array.');
+        }
+    }
+
+    public function testInsert_multi_fail_dataParam2TypeError_array() {
+        try {
+            $result = $this->db->data(['id', 'user_name'], "zhangshan")->insert('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the second parameter must be an array.');
+        }
+    }
+
+    public function testInsert_multi_fail_dataParam2TypeError_normalArray() {
+        try {
+            $result = $this->db->data(['id', 'user_name'], ['user_name' => 'zhgangsan'])->insert('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the second parameter must be an normal array.');
+        }
+    }
+
+    public function testInsert_multi_fail_dataParam2ElementsTypeError_normalArray() {
+        try {
+            $result = $this->db->data(['id', 'user_name'], [['id' => 1, 'username' => 'zhangsan']])->insert('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Data type error, the element of the second parameter must be an normal array.');
+        }
     }
 
     public function testInsert_multi() {
@@ -134,6 +176,48 @@ class TestChainPDO {
         ];
         $result = $this->db->data($fields, $users)->insert('user');
         PunitAssert::assertEquals($result, 3);
+    }
+
+    /************************    链式 DELETE   ************************/
+
+    public function testDelete_withWhereArray() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->where(['user_name' => 'lisi'])->delete('user');
+        PunitAssert::assertStrictEquals($result, 1);
+    }
+
+    public function testDelete_withWhereString() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->where("user_name in ('zhangsan', 'wangwu')")->delete('user');
+        PunitAssert::assertStrictEquals($result, 2);
+    }
+
+    public function testDelete_withLimit_fail_limitTypeError() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        try {
+            $result = $this->db->limit('2, 1')->delete('user');
+        } catch (Exception $e) {
+            PunitAssert::assertStrictEquals($e->getMessage(), 'Limit type error, must be an integer.');
+        }
+    }
+
+    public function testDelete_withLimit() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->limit(1)->delete('user');  // 'zhangsan' was deleted
+        PunitAssert::assertStrictEquals($result, 1);
+    }
+
+    public function testDelete_withOrder() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->order('id desc')->limit(1)->delete('user');
+        PunitAssert::assertStrictEquals($result, 1); // 'wangwu' was deleter
+        // todo: assert 'wangwu' was deleted
+    }
+
+    public function testDelete() {
+        $this->db->data(['user_name'], [['zhangsan'], ['lisi'], ['wangwu']])->insert('user');
+        $result = $this->db->delete('user');
+        PunitAssert::assertStrictEquals($result, 3);
     }
 
 }

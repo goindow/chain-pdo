@@ -43,44 +43,99 @@ class ChainPDO {
     
     /*************************    链式条件    *************************/
 
+    /**
+     * 去重
+     */
     public function distinct() { $this->options['distinct'] = true; return $this; }
 
+    /**
+     * 字段
+     *
+     * @param  $field  array|string
+     */
     public function field($field) { $this->options['field'] = $field; return $this; }
 
+    /**
+     * 关联
+     *
+     * @param  $join  string
+     */
     public function join($join) { $this->options['join'] = trim($join); return $this; }
 
+    /**
+     * 条件
+     *
+     * @param  $where  array|string，array 只支持简单的等于比较，其他情况需使用 string 传递 where 条件
+     *   
+     */
     public function where($where) { $this->options['where'] = $where; return $this; }
 
     public function group($group) { $this->options['group'] = $group; return $this; }
 
     public function having($having) { $this->options['having'] = $having; return $this; }
 
+    /**
+     * 排序
+     *
+     * @param  $order  string
+     */
     public function order($order) { $this->options['order'] = trim($order); return $this; }
 
-    public function limit($limit) { $this->options['limit'] = trim($limit); return $this; }
+    /**
+     * 分页
+     *
+     * @param  $limit  string|int
+     *
+     * DELETE 语句传递的必须是 int，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
+     */
+    public function limit($limit) { $this->options['limit'] = $limit; return $this; }
 
-    public function data($dataOrFields, $data = []) { $this->options['data'] = [ "dataOrFields" => $dataOrFields, "data" => $data]; return $this; }
+    /**
+     * 数据
+     *
+     * @param  $dataOrFields  array
+     * @param  $data          array
+     */
+    public function data($dataOrFields, $data = []) { 
+        $this->options['data'] = [
+            "dataOrFields" => $dataOrFields,
+            "data" => $data
+        ];
+        return $this;
+    }
 
     /*************************    链式 CURD    *************************/
 
     /**
-     * 插入 - 支持单条插入（关联数组）和批量插入（普通数组，元素为关联数组）
+     * 增 - 单行/批量插入
      *
-     * @param onlyReturnSql 为 true 时，只解析返回 sql，并不执行，下同
+     * @param  $table          string  表名
+     * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function insert($table, $onlyReturnSql = false) {
         $sql = "INSERT INTO {$table} " . $this->parseDataForInsert();
-        // cleanAndReturnSql($sql)，由于属性的清理工作是放在 execute/query 方法中，当 $onlyReturnSql = true 时未调用
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
+    /**
+     * 删
+     *
+     * @param  $table          string  表名
+     * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
+     */
     public function delete($table, $onlyReturnSql = false) {
         $sql = "DELETE FROM {$table} " . $this->parseWhere()
                                        . $this->parseOrder()
-                                       . $this->parseLimit();
+                                       . $this->parseLimitForDelete();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
+    /**
+     * 改
+     *
+     * @param  $table          string  表名
+     * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
+     */
     public function update($table, $onlyReturnSql = false) {
         $sql = "UPDATE {$table} SET " . $this->parseDataForUpdate()
                                       . $this->parseWhere()
@@ -89,6 +144,12 @@ class ChainPDO {
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
+    /**
+     * 查
+     *
+     * @param  $table          string  表名
+     * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
+     */
     public function select($table, $onlyReturnSql = false) {
         $sql = "SELECT " . $this->parseDistinct()
                          . $this->parseField() . $table
@@ -101,6 +162,13 @@ class ChainPDO {
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->query($sql);
     }
 
+    /**
+     * 统计
+     *
+     * @param  $table          string  表名
+     * @param  $keyName        string  count 字段，默认 id
+     * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
+     */
     public function count($table, $keyName = 'id', $onlyReturnSql = false) {
         $sql = "SELECT " . $this->parseDistinct()
                          . " count({$keyName}) FROM {$table}"
@@ -128,7 +196,7 @@ class ChainPDO {
         $this->clean();
         $this->sql = trim($sql);
         $result = $this->pdo->exec($this->sql);
-        $this->hasError();
+        $this->ensure();
         return $this->is_insert($this->sql) ? $result > 1 ? $result : $this->pdo->lastInsertId() : $result;
     }
 
@@ -140,7 +208,7 @@ class ChainPDO {
         $this->sql = trim($sql);
         $this->stmt = $this->pdo->prepare($this->sql);
         $this->stmt->execute();
-        $this->hasError();
+        $this->ensure();
         return $this->stmt->fetchAll(constant("PDO::FETCH_ASSOC"));
     }
 
@@ -148,7 +216,21 @@ class ChainPDO {
 
     private function parseJoin() { if (!empty($this->options['join'])) return ' ' . $this->options['join']; }
 
-    private function parseLimit() { if (!empty($this->options['limit'])) return ' LIMIT ' . $this->options['limit']; }
+    /**
+     * limit 解析 - !DELETE
+     */
+    private function parseLimit() { if (!empty($this->options['limit'])) return ' LIMIT ' . trim($this->options['limit']); }
+
+    /**
+     * limit 解析 - DELETE
+     * 
+     * DELETE 语句必须是 int，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
+     */
+    private function parseLimitForDelete() { 
+        if (empty($this->options['limit'])) return;
+        if (!is_int($this->options['limit'])) throw new Exception('Limit type error, must be an integer.');
+        return ' LIMIT ' . trim($this->options['limit']);
+    }
 
     private function parseOrder() { if (!empty($this->options['order'])) return ' ORDER BY ' . $this->options['order']; }
 
@@ -162,16 +244,15 @@ class ChainPDO {
         if (is_array($this->options['field'])) array_walk($this->options['field'], [$this, "addSpecialChar"]);
         if (is_string($this->options['field'])) {
             $this->options['field'] = explode(',', $this->options['field']);
-            // array_walk(array, function, [data]) 对 array 中的每个元素应用 function，如果成功则返回 TRUE，否则返回 FALSE
             array_walk($this->options['field'], [$this, "addSpecialChar"]);
         }
         return implode(',', $this->options['field']) . " FROM ";
     }
 
     private function parseWhere() {
-        if (empty($this->options['where'])) return ;
+        if (empty($this->options['where'])) return;
         if (is_string($this->options['where'])) return ' WHERE ' . $this->options['where'];
-        if (is_array($this->options['where'])) {
+        if (is_array($this->options['where']) && self::is_assoc($this->options['where'])) {
             $where = [];
             foreach ($this->options['where'] as $k => $v) array_push($where, $this->addSpecialChar($k) . ' = "' . $v . '"'); 
             return ' WHERE ' . implode(' AND ', $where);
@@ -185,43 +266,101 @@ class ChainPDO {
     }
 
     /**
-     * UPDATE data 解析
+     * data 解析 - UPDATE
      */
     private function parseDataForUpdate() {
-        if (empty($this->options['data']['dataOrFields']) || !is_array($this->options['data']['dataOrFields'])) {
-            throw new Exception('Missing data or type error.');
-        }
+        if (empty($this->options['data']['dataOrFields'])) throw new Exception('Data missing first parameter.');
+        $this->ensureArray($this->options['data']['dataOrFields'], 'the first');
         $data = [];
         foreach ($this->options['data']['dataOrFields'] as $k => $v) array_push($data, $this->addSpecialChar($k) . ' = "'  .$v . '"');
         return implode(',', $data);
     }
 
     /**
-     * INSERT data 解析
+     * data 解析 - INSERT
      */
     private function parseDataForInsert() {
-        if (empty($this->options['data']['dataOrFields']) || !is_array($this->options['data']['dataOrFields'])) {
-            throw new Exception('Missing data or type error.');
-        }
-        if (empty($this->options['data']['data'])) {    // 单行插入
-            $keys = array_keys($this->options['data']['dataOrFields']);
-            $values = array_values($this->options['data']['dataOrFields']);
-            array_walk($keys, [$this, "addSpecialChar"]);
-            $sql = ' (' . implode(',', $keys) .') VALUES ("' . implode('","', $values) . '")';
-        } else {    // 批量插入
-            $keys = $this->options['data']['dataOrFields'];
-            $values = $this->options['data']['data'];
-            array_walk($keys, [$this, "addSpecialChar"]);
-            $sql = ' (' . implode(',', $keys) .') VALUES ';
-            foreach ($values as $k => $v) {
-                if ($k == 0) { $sql .= '("' . implode('","', $v) . '")'; continue; }
-                $sql .= ',("' . implode('","', $v) . '")';
-            }
+        if (empty($this->options['data']['dataOrFields'])) throw new Exception('Data missing first parameter.');
+        $this->ensureArray($this->options['data']['dataOrFields'], 'the first');
+        return empty($this->options['data']['data']) ? $this->parseDataForInsertSingle() : $this->parseDataForInsertMulti();
+    }
+
+    /**
+     * data 解析 - 单行 INSERT
+     */
+    private function parseDataForInsertSingle() {
+        $this->ensureAssocArray($this->options['data']['dataOrFields'], 'the first');
+        $keys = array_keys($this->options['data']['dataOrFields']);
+        array_walk($keys, [$this, "addSpecialChar"]);
+        return ' (' . implode(',', $keys) .') VALUES ("' . implode('","', array_values($this->options['data']['dataOrFields'])) . '")';
+    }
+
+    /**
+     * data 解析 - 批量 INSERT
+     */
+    private function parseDataForInsertMulti() {
+        $this->ensureNormalArray($this->options['data']['dataOrFields'], 'the first');
+        $this->ensureArray($this->options['data']['data'], 'the second');
+        $this->ensureNormalArray($this->options['data']['data'], 'the second');
+        $keys = $this->options['data']['dataOrFields'];
+        array_walk($keys, [$this, "addSpecialChar"]);
+        $sql = ' (' . implode(',', $keys) .') VALUES ';
+        foreach ($this->options['data']['data'] as $k => $v) {
+            $this->ensureNormalArray($v, 'the element of the second');
+            if ($k == 0) { $sql .= '("' . implode('","', $v) . '")'; continue; }
+            $sql .= ',("' . implode('","', $v) . '")';
         }
         return $sql;
     }
 
+    /************************    异常检查    *************************/
+
+    /**
+     * 确保无错误
+     */    
+    private function ensure() {
+        $obj = $this->stmt ? $this->stmt : $this->pdo;
+        $error = $obj->errorInfo();
+        if ($error[0] != '00000') throw new Exception("SQL_STATE: {$error[0]}, ERROR_INFO: {$error[2]}, SQL: {$this->sql}.");
+    }
+
+    /**
+     * 确保是数组
+     */
+    private function ensureArray($array, $location) {
+        if (!is_array($array)) throw new Exception("Data type error, {$location} parameter must be an array."); 
+    }
+
+    /**
+     * 确保是普通数组
+     */
+    private function ensureNormalArray($array, $location) { 
+        if (self::is_assoc($array)) throw new Exception("Data type error, {$location} parameter must be an normal array."); 
+    }
+
+    /**
+     * 确保是关联数组
+     */
+    private function ensureAssocArray($array, $location) {
+        if (!self::is_assoc($array)) throw new Exception("Data type error, {$location} parameter must be an associative array."); 
+    }
+
     /************************    其他    *************************/
+
+    /**
+     * 判断是否是关联数组
+     */
+    public static function is_assoc($array) { return array_diff_assoc(array_keys($array), range(0, count($array) - 1)) ? true : false; }
+
+    /**
+     * 判断是否是 INSERT 语句
+     */
+    private function is_insert($sql) { return strtoupper(substr($sql, 0, 6)) === 'INSERT'; }
+
+    /**
+     * 判断是否是 SELECT 语句
+     */
+    private function is_select($sql) { return strtoupper(substr($sql, 0, 6)) === 'SELECT'; }
 
     /**
      * 反引号字段，防止 SQL 关键字冲突
@@ -236,25 +375,13 @@ class ChainPDO {
     }
 
     /**
-     * 检查执行结果
-     */    
-    private function hasError() {
-        $obj = $this->stmt ? $this->stmt : $this->pdo;
-        $error = $obj->errorInfo();
-        if ($error[0] != '00000') throw new Exception("SQL_STATE: {$error[0]}, ERROR_INFO: {$error[2]}, SQL: {$this->sql}.");
-    }
-
+     * 清理属性，并返回 sql
+     */
     private function cleanAndReturnSql($sql) { $this->clean(); return $sql; }
 
-    private function clean() { $this->sql = ''; $this->stmt = null; $this->options = []; }
-
-    private function is_insert($sql) { return strtoupper(substr($sql, 0, 6)) === 'INSERT'; }
-
-    private function is_select($sql) { return strtoupper(substr($sql, 0, 6)) === 'SELECT'; }
-
     /**
-     * 判断是否是关联数组
+     * 清理属性
      */
-    public static function is_assoc($array) { return array_diff_assoc(array_keys($array), range(0, count($array) - 1)) ? true : false; }
+    private function clean() { $this->sql = ''; $this->stmt = null; $this->options = []; }
 
 }

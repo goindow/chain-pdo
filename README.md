@@ -41,30 +41,30 @@ db2 = chainPdoFactory->getDb(1);   // db index 1 - test2
 ```
 
 ## ChainPDO
-- 链式条件
-  - distinct()
+### 链式条件
+- distinct()
 ```php
 db->distinct()->select('user');
 ```
-  - field($field)
+- field($field)
 ```php
 db->field(['id', 'user_name'])->select('user');    // array
 
 db->field('id, user_name')->select('user');        // string
 ```
-  - join($join)
+- join($join)
 ```php
 db->field(['o.id', 'o.price', 'o.status', 'u.id as user_id', 'u.user_name'])
   ->join('left join user as u on u.id = o.user_id')
   ->select('`order` as o');
 ```
-  - where($where)
+- where($where)
 ```php
 db->where(['user_name' => 'lisi'])->select('user');    // array
 
 db->where("user_name like '%an%'")->select('user');    // string
 ```
-  - group($group)
+- group($group)
 ```php
 db->field(['user_id', 'status', 'sum(price) as price'])
   ->group(['user_id', 'status'])
@@ -74,7 +74,7 @@ db->field(['user_id', 'status', 'sum(price) as price'])
   ->group('user_id,status')
   ->select('order');    // string
 ```
-  - having($having)
+- having($having)
 ```php
 db->field(['user_id', 'status', 'sum(price) as price'])
   ->group(['user_id', 'status'])
@@ -86,12 +86,12 @@ db->field(['user_id', 'status', 'sum(price) as price'])
   ->having('price >= 200')
   ->select('order');    // string
 ```
-  - order($order)
+- order($order)
 ```php
 db->order('id desc')->select('user');
 ```
-  - limit($limit)
-    - UPDATE/DELETE 语句必须是整数(或整数字符串)，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
+- limit($limit)
+  - UPDATE/DELETE 语句必须是整数(或整数字符串)，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
 ```
 // UPDATE/DELETE，进能传递整数
 db->order('id desc')->limit(1)->delete('user')
@@ -113,10 +113,10 @@ $fields = ['id', 'user_name'];
 $users = [[1, 'zhangsan'], [2, 'lisi'], [3, 'wangwu']];
 db->data($fields, $users)->insert('user');
 ```
-- 链式 CURD
-  - insert($table, $onlyReturnSql = false)
-    - 支持的链式条件
-        - data($dataOrFields, $data = [])
+### 链式 CURD
+- insert($table, $onlyReturnSql = false)
+  - 支持的链式条件
+    - data($dataOrFields, $data = [])
 ```php
 // INSERT 单行插入
 db->data(['user_name' => 'zhangsan'])->insert('user');
@@ -126,54 +126,54 @@ $fields = ['id', 'user_name'];
 $users = [[1, 'zhangsan'], [2, 'lisi'], [3, 'wangwu']];
 db->data($fields, $users)->insert('user');
 ```
-  - delete($table, $onlyReturnSql = false)
-    - 支持的链式条件
-      - where($where)
-      - order($order)
-      - limit($limit)
+- delete($table, $onlyReturnSql = false)
+  - 支持的链式条件
+    - where($where)
+    - order($order)
+    - limit($limit)
 ```php
 db->order('id desc')->limit(1)->delete('user')
 ```
-  - update($table, $onlyReturnSql = false)
-    - 支持的链式条件
-      - data($dataOrFields, [])
-      - where($where)
-      - order($order)
-      - limit($limit)
+- update($table, $onlyReturnSql = false)
+  - 支持的链式条件
+    - data($dataOrFields, [])
+    - where($where)
+    - order($order)
+    - limit($limit)
 ```php
 db->data(['user_name' => 'zhaoliu'])->update('user');
 ```
-  - select($table, $onlyReturnSql = false)
-    - 支持的链式条件
-      - distinct()
-      - field($field)
-      - join($join)
-      - where($where)
-      - group($group)
-      - having($having)
-      - order($order)
-      - limit($limit)
-      - data($dataOrFields, [])
+- select($table, $onlyReturnSql = false)
+  - 支持的链式条件
+    - distinct()
+    - field($field)
+    - join($join)
+    - where($where)
+    - group($group)
+    - having($having)
+    - order($order)
+    - limit($limit)
+    - data($dataOrFields, [])
 ```php
 db->where(['user_name' => 'lisi'])->select('user');
 ```
-  - count($table, $keyName = 'id', $onlyReturnSql = false)
-    - 支持的链式条件
+- count($table, $keyName = 'id', $onlyReturnSql = false)
+  - 支持的链式条件
 ```php
 db->where(['user_name' => 'lisi'])->count('user');
 
 db->where(['user_name' => 'lisi'])->count('user', 'unique_code');
 ```
-- 原生 sql
-  - sql($sql)
+### 原生 sql
+- sql($sql)
 ```php
 $sql = "INSERT INTO `user` (`user_name`) VALUES ('zhangsan')";
 $insertId = db->sql($sql);
 ```
-- 事务
-  - beginTransaction()
-  - commit()
-  - rollback()
+### 事务
+- beginTransaction()
+- commit()
+- rollback()
 ```php
 db->beginTransaction();
 try {

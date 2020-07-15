@@ -137,7 +137,7 @@ class Punit {
     }
 
     /**
-     * 运行测试用例前
+     * 运行测试用例后
      */
     private function runCaseAfter($caseFileIndex, $caseFileObject) {
         if (empty($this->caseFiles[$caseFileIndex]['aop']['after'])) return;

@@ -2,7 +2,7 @@
 链式 PDO 封装库，支持多数据源/数据库、链式操作、源生语句、事务处理等
 
 ## 说明
-- 支持多数据库、多数据库
+- 支持多数据源、多数据库
 - 支持常用关键字的链式操作，如有需可扩展
 - 支持事物
 - 支持原生 sql
@@ -11,7 +11,6 @@
 ## ChainPDOFactory
 - 通过 ChainPDOFactory 构建 ChainPDO 对象集合
 - 根据数据源配置索引获取 ChainPDO 对象
-- 
 ```php
 // $configSingle = [
 //     'DB_HOST' => '127.0.0.1',
@@ -39,6 +38,15 @@ chainPdoFactory =  ChainPDOFactory::build($configMulti);
 db1 = chainPdoFactory->getDb();    // default db index 0 - test1
 db2 = chainPdoFactory->getDb(1);   // db index 1 - test2
 ```
+## 数据源配置
+- DB_TYPE，数据源类型，默认 mysql
+- DB_CHAR，字符集，默认 utf8
+- DB_PORT，端口地址，默认 3306
+- DB_HOST，主机地址
+- DB_NAME，数据库名
+- DB_USERNAME，用户名
+- DB_PASSWORD，密码
+- DB_OPTIONS，PDO 实例化参数
 
 ## ChainPDO
 链式 PDO 封装类

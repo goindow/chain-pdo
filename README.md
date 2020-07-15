@@ -2,8 +2,7 @@
 链式 PDO 封装库，支持多数据源、数据库、链式操作、源生 sql、事务处理等
 
 ## ChainPDOFactory
-- 通过 ChainPDOFactory 构建 ChainPDO 对象集合
-- 根据数据源配置索引获取 ChainPDO 对象
+- 通过 ChainPDOFactory 构建 ChainPDO 对象集合，根据数据源配置索引获取 ChainPDO 对象
 - 数据源配置项
   - DB_TYPE，数据源类型，默认 mysql
   - DB_CHAR，字符集，默认 utf8

@@ -1,6 +1,8 @@
 <?php
 class ChainPDO {
 
+    // 是否记录解析/执行的所有sql
+    private $keepLogs = false;
     // 数据库配置
     private $config = [];
     // PDO 对象
@@ -33,19 +35,18 @@ class ChainPDO {
 
     public function getConfig() { return $this->config; }
 
+    public function setKeepLogs($keepLogs) { $this->keepLogs = $keepLogs; }
+
     /*************************    事务    *************************/
 
     public function beginTransaction() { $this->pdo->beginTransaction(); }
 
     public function commit() { $this->pdo->commit(); }
 
-    public function rollBack() { $this->pdo->rollBack(); }
+    public function rollback() { $this->pdo->rollBack(); }
     
     /*************************    链式条件    *************************/
 
-    /**
-     * 去重
-     */
     public function distinct() { $this->options['distinct'] = true; return $this; }
 
     /**
@@ -70,8 +71,20 @@ class ChainPDO {
      */
     public function where($where) { $this->options['where'] = $where; return $this; }
 
+    /**
+     * 分组
+     *
+     * @param  $group  array|string
+     *   
+     */
     public function group($group) { $this->options['group'] = $group; return $this; }
 
+    /**
+     * 分组条件
+     *
+     * @param  $having  array|string，array 只支持简单的等于比较，其他情况需使用 string 传递 having 条件
+     *   
+     */
     public function having($having) { $this->options['having'] = $having; return $this; }
 
     /**
@@ -96,13 +109,7 @@ class ChainPDO {
      * @param  $dataOrFields  array
      * @param  $data          array
      */
-    public function data($dataOrFields, $data = []) { 
-        $this->options['data'] = [
-            "dataOrFields" => $dataOrFields,
-            "data" => $data
-        ];
-        return $this;
-    }
+    public function data($dataOrFields, $data = []) { $this->options['data'] = ['dataOrFields' => $dataOrFields, 'data' => $data]; return $this; }
 
     /*************************    链式 CURD    *************************/
 
@@ -113,7 +120,7 @@ class ChainPDO {
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function insert($table, $onlyReturnSql = false) {
-        $sql = "INSERT INTO {$table} " . $this->parseDataForInsert();
+        $sql = "INSERT INTO {$this->addSpecialChar($table)} " . $this->parseDataForInsert();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
@@ -124,9 +131,9 @@ class ChainPDO {
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function delete($table, $onlyReturnSql = false) {
-        $sql = "DELETE FROM {$table} " . $this->parseWhere()
-                                       . $this->parseOrder()
-                                       . $this->parseLimitForUD();
+        $sql = "DELETE FROM {$this->addSpecialChar($table)} " . $this->parseWhere()
+                                                              . $this->parseOrder()
+                                                              . $this->parseLimitForUD();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
@@ -137,10 +144,10 @@ class ChainPDO {
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function update($table, $onlyReturnSql = false) {
-        $sql = "UPDATE {$table} SET " . $this->parseDataForUpdate()
-                                      . $this->parseWhere()
-                                      . $this->parseOrder()
-                                      . $this->parseLimitForUD();
+        $sql = "UPDATE {$this->addSpecialChar($table)} SET " . $this->parseDataForUpdate()
+                                                             . $this->parseWhere()
+                                                             . $this->parseOrder()
+                                                             . $this->parseLimitForUD();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->execute($sql);
     }
 
@@ -151,8 +158,9 @@ class ChainPDO {
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function select($table, $onlyReturnSql = false) {
-        $sql = "SELECT " . $this->parseDistinct()
-                         . $this->parseField() . $table
+        $sql = 'SELECT ' . $this->parseDistinct()
+                         . $this->parseField() 
+                         . $this->addSpecialChar($table) . ' '
                          . $this->parseJoin()
                          . $this->parseWhere()
                          . $this->parseGroup()
@@ -170,8 +178,8 @@ class ChainPDO {
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
     public function count($table, $keyName = 'id', $onlyReturnSql = false) {
-        $sql = "SELECT " . $this->parseDistinct()
-                         . " count({$keyName}) FROM {$table}"
+        $sql = 'SELECT ' . $this->parseDistinct()
+                         . " count({$keyName}) FROM {$this->addSpecialChar($table)}"
                          . $this->parseJoin()
                          . $this->parseWhere();
         return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->query($sql)[0]["count({$keyName})"];
@@ -209,17 +217,17 @@ class ChainPDO {
         $this->stmt = $this->pdo->prepare($this->sql);
         $this->stmt->execute();
         $this->ensure();
-        return $this->stmt->fetchAll(constant("PDO::FETCH_ASSOC"));
+        return $this->stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /************************　　链式解析　  ************************/
 
-    private function parseJoin() { if (!empty($this->options['join'])) return ' ' . $this->options['join']; }
+    private function parseJoin() { if (!empty($this->options['join'])) return "{$this->options['join']} "; }
 
     /**
      * limit 解析 - !(UPDATE/DELETE)
      */
-    private function parseLimit() { if (!empty($this->options['limit'])) return ' LIMIT ' . trim($this->options['limit']); }
+    private function parseLimit() { if (!empty($this->options['limit'])) return 'LIMIT ' . trim($this->options['limit']) . ' '; }
 
     /**
      * limit 解析 - UPDATE/DELETE
@@ -228,122 +236,101 @@ class ChainPDO {
      */
     private function parseLimitForUD() { 
         if (empty($this->options['limit'])) return;
-        if (!is_int($this->options['limit'])) throw new Exception('Limit type error, must be an integer.');
-        return ' LIMIT ' . trim($this->options['limit']);
+        if (!is_int($this->options['limit'])) $this->cleanAndThrowException('Limit type error, must be an integer.');
+        return 'LIMIT ' . trim($this->options['limit']) . ' ';
     }
 
-    private function parseOrder() { if (!empty($this->options['order'])) return ' ORDER BY ' . $this->options['order']; }
+    private function parseOrder() { if (!empty($this->options['order'])) return "ORDER BY {$this->options['order']} "; }
 
-    private function parseHaving() { if (!empty($this->options['having'])) return ' HAVING ' . $this->options['having']; }
-
-    private function parseDistinct() { if (!empty($this->options['distinct'])) return "DISTINCT "; }
+    private function parseDistinct() { if (!empty($this->options['distinct'])) return 'DISTINCT '; }
 
 
     private function parseField() {
-        if (empty($this->options['field'])) return "* FROM ";
-        if (is_array($this->options['field'])) array_walk($this->options['field'], [$this, "addSpecialChar"]);
+        if (empty($this->options['field'])) return '* FROM ';
+        if (is_array($this->options['field'])) array_walk($this->options['field'], [$this, 'addSpecialChar']);
         if (is_string($this->options['field'])) {
             $this->options['field'] = explode(',', $this->options['field']);
-            array_walk($this->options['field'], [$this, "addSpecialChar"]);
+            array_walk($this->options['field'], [$this, 'addSpecialChar']);
         }
-        return implode(',', $this->options['field']) . " FROM ";
+        return implode(',', $this->options['field']) . ' FROM ';
     }
 
-    private function parseWhere() {
-        if (empty($this->options['where'])) return;
-        if (is_string($this->options['where'])) return ' WHERE ' . $this->options['where'];
-        if (is_array($this->options['where']) && self::is_assoc($this->options['where'])) {
-            $where = [];
-            foreach ($this->options['where'] as $k => $v) array_push($where, $this->addSpecialChar($k) . ' = "' . $v . '"'); 
-            return ' WHERE ' . implode(' AND ', $where);
+    private function parseWhere() { return $this->parseWhereOrHaving(); }
+
+    private function parseHaving() { return $this->parseWhereOrHaving(false); }
+
+    private function parseWhereOrHaving($isWhere = true) {
+        $flag = $isWhere ? 'where' : 'having';
+        if (empty($this->options[$flag])) return;
+        if (is_string($this->options[$flag])) return strtoupper($flag) . " {$this->options[$flag]} ";
+        if (is_array($this->options[$flag]) && self::is_assoc($this->options[$flag])) {
+            $conditions = [];
+            foreach ($this->options[$flag] as $k => $v) array_push($conditions, $this->addSpecialChar($k) . '="' . $v . '"'); 
+            return strtoupper($flag) . ' ' . implode(' AND ', $conditions) . ' ';
         }
     }
 
     private function parseGroup() {
         if (empty($this->options['group'])) return;
-        if (is_string($this->options['group'])) return ' GROUP BY ' . $this->options['group'];
-        if (is_array($this->options['group'])) return ' GROUP BY ' . implode(',', $this->options['group']);
+        if (is_string($this->options['group'])) return "GROUP BY {$this->options['group']} ";
+        if (is_array($this->options['group'])) return 'GROUP BY ' . implode(',', $this->options['group']) . ' ';
     }
 
-    /**
-     * data 解析 - UPDATE
-     */
     private function parseDataForUpdate() {
-        if (empty($this->options['data']['dataOrFields'])) throw new Exception('Data missing first parameter.');
+        if (empty($this->options['data']['dataOrFields'])) $this->cleanAndThrowException('Data missing first parameter.');
         $this->ensureArray($this->options['data']['dataOrFields'], 'the first');
         $this->ensureAssocArray($this->options['data']['dataOrFields'], 'the first');
         $data = [];
-        foreach ($this->options['data']['dataOrFields'] as $k => $v) array_push($data, $this->addSpecialChar($k) . ' = "'  .$v . '"');
-        return implode(',', $data);
+        foreach ($this->options['data']['dataOrFields'] as $k => $v) array_push($data, $this->addSpecialChar($k) . '="'  .$v . '"');
+        return implode(',', $data) . ' ';
     }
 
-    /**
-     * data 解析 - INSERT
-     */
     private function parseDataForInsert() {
-        if (empty($this->options['data']['dataOrFields'])) throw new Exception('Data missing first parameter.');
+        if (empty($this->options['data']['dataOrFields'])) $this->cleanAndThrowException('Data missing first parameter.');
         $this->ensureArray($this->options['data']['dataOrFields'], 'the first');
         return empty($this->options['data']['data']) ? $this->parseDataForInsertSingle() : $this->parseDataForInsertMulti();
     }
 
-    /**
-     * data 解析 - 单行 INSERT
-     */
     private function parseDataForInsertSingle() {
         $this->ensureAssocArray($this->options['data']['dataOrFields'], 'the first');
         $keys = array_keys($this->options['data']['dataOrFields']);
-        array_walk($keys, [$this, "addSpecialChar"]);
-        return ' (' . implode(',', $keys) .') VALUES ("' . implode('","', array_values($this->options['data']['dataOrFields'])) . '")';
+        array_walk($keys, [$this, 'addSpecialChar']);
+        return '(' . implode(',', $keys) .') VALUES ("' . implode('","', array_values($this->options['data']['dataOrFields'])) . '") ';
     }
 
-    /**
-     * data 解析 - 批量 INSERT
-     */
     private function parseDataForInsertMulti() {
         $this->ensureNormalArray($this->options['data']['dataOrFields'], 'the first');
         $this->ensureArray($this->options['data']['data'], 'the second');
         $this->ensureNormalArray($this->options['data']['data'], 'the second');
         $keys = $this->options['data']['dataOrFields'];
-        array_walk($keys, [$this, "addSpecialChar"]);
-        $sql = ' (' . implode(',', $keys) .') VALUES ';
+        array_walk($keys, [$this, 'addSpecialChar']);
+        $sql = '(' . implode(',', $keys) .') VALUES ';
         foreach ($this->options['data']['data'] as $k => $v) {
             $this->ensureNormalArray($v, 'the element of the second');
             if ($k == 0) { $sql .= '("' . implode('","', $v) . '")'; continue; }
             $sql .= ',("' . implode('","', $v) . '")';
         }
-        return $sql;
+        return $sql . ' ';
     }
 
     /************************    异常检查    *************************/
-
-    /**
-     * 确保无错误
-     */    
+ 
     private function ensure() {
         $obj = $this->stmt ? $this->stmt : $this->pdo;
         $error = $obj->errorInfo();
-        if ($error[0] != '00000') throw new Exception("SQL_STATE: {$error[0]}, ERROR_INFO: {$error[2]}, SQL: {$this->sql}.");
+        if ($error[0] != '00000') $this->cleanAndThrowException("SQL_STATE: {$error[0]}, ERROR_INFO: {$error[2]}, SQL: {$this->sql}.");
     }
 
-    /**
-     * 确保是数组
-     */
     private function ensureArray($array, $location) {
-        if (!is_array($array)) throw new Exception("Data type error, {$location} parameter must be an array."); 
+        if (!is_array($array)) $this->cleanAndThrowException("Data type error, {$location} parameter must be an array.");
     }
 
-    /**
-     * 确保是普通数组
-     */
     private function ensureNormalArray($array, $location) { 
-        if (self::is_assoc($array)) throw new Exception("Data type error, {$location} parameter must be an normal array."); 
+        if (self::is_assoc($array)) $this->cleanAndThrowException("Data type error, {$location} parameter must be an normal array.");
     }
 
-    /**
-     * 确保是关联数组
-     */
     private function ensureAssocArray($array, $location) {
-        if (!self::is_assoc($array)) throw new Exception("Data type error, {$location} parameter must be an associative array."); 
+        if (!self::is_assoc($array)) $this->cleanAndThrowException("Data type error, {$location} parameter must be an associative array.");
     }
 
     /************************    其他    *************************/
@@ -376,13 +363,17 @@ class ChainPDO {
     }
 
     /**
-     * 清理属性，并返回 sql
+     * 清理属性，并抛出异常
      */
-    private function cleanAndReturnSql($sql) { $this->clean(); return $sql; }
+    private function cleanAndThrowException($error) { $this->clean(); throw new Exception($error); }
 
     /**
-     * 清理属性
+     * 清理属性，并返回 sql
      */
-    private function clean() { $this->sql = ''; $this->stmt = null; $this->options = []; }
+    private function cleanAndReturnSql($sql) { $this->clean(); return trim($sql); }
+
+    private function clean() { $this->keepLogs(); $this->sql = ''; $this->stmt = null; $this->options = []; }
+
+    private function keepLogs() { if ($this->keepLogs) file_put_contents('sql.log', "{$this->sql}\n", FILE_APPEND); }
 
 }

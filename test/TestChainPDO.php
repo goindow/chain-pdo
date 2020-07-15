@@ -131,10 +131,7 @@ class TestChainPDO {
     }
 
     public function testInsert_single() {
-        $user = [
-            'user_name' => 'zhangsan'
-        ];
-        $result = $this->db->data($user)->insert('user');
+        $result = $this->db->data(['user_name' => 'zhangsan'])->insert('user');
         PunitAssert::assertGt($result, 0);
     }
 

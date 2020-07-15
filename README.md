@@ -41,17 +41,13 @@ db2 = chainPdoFactory->getDb(1);   // db index 1 - test2
 ```
 
 ## ChainPDO
-链式 PDO 封装类
-
-### 原生 sql
-- sql($sql)
+- 原生 sql
+  - sql($sql)
 ```php
 $sql = "INSERT INTO `user` (`user_name`) VALUES ('zhangsan')";
 $insertId = db->sql($sql);
 ```
-
-### 链式操作
-- 链式操作
+- 链式 CURD
   - insert($table, $onlyReturnSql = false)
   - delete($table, $onlyReturnSql = false)
   - update($table, $onlyReturnSql = false)
@@ -67,9 +63,10 @@ $insertId = db->sql($sql);
   - order($order)
   - limit($limit)
   - data($dataOrFields, $data = [])
-```php
-
-```
+- 事物
+  - beginTransaction()
+  - commit()
+  - rollback()
 
 
 

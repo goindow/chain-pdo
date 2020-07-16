@@ -157,12 +157,10 @@ db->data(['user_name' => 'zhaoliu'])->update('user');
 ```php
 db->where(['user_name' => 'lisi'])->select('user');
 ```
-- count($table, $keyName = 'id', $onlyReturnSql = false)
+- count($table, $onlyReturnSql = false)
   - 支持的链式条件
 ```php
-db->where(['user_name' => 'lisi'])->count('user');
-
-db->where(['user_name' => 'lisi'])->count('user', 'unique_code');
+db->where(['status' => 2])->count('user');
 ```
 ### 原生 sql
 - sql($sql)

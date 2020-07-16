@@ -174,15 +174,14 @@ class ChainPDO {
      * 统计
      *
      * @param  $table          string  表名
-     * @param  $keyName        string  count 字段，默认 id
      * @param  $onlyReturnSql  bool    true - 只解析返回 sql，并不执行
      */
-    public function count($table, $keyName = 'id', $onlyReturnSql = false) {
+    public function count($table, $onlyReturnSql = false) {
         $sql = 'SELECT ' . $this->parseDistinct()
-                         . " count({$keyName}) FROM {$this->addSpecialChar($table)}"
+                         . " count(*) FROM {$this->addSpecialChar($table)}"
                          . $this->parseJoin()
                          . $this->parseWhere();
-        return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->query($sql)[0]["count({$keyName})"];
+        return $onlyReturnSql ? $this->cleanAndReturnSql($sql) : $this->query($sql)[0]["count(*)"];
     }
 
     /*************************    原生 CURD    *************************/

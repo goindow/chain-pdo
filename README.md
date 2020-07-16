@@ -190,6 +190,9 @@ try {
 } 
 ```
 
+## 测试报告
+![测试报告](https://github.com/goindow/chain-pdo/blob/master/test/report.png)
+
 
 
 

@@ -103,7 +103,7 @@ db->limit('3,1')->select('user');
   - data($dataOrFields, $data = [])
 ```php
 // UPDATE
-db->data(['user_name' => 'zhaoliu'])->update('user');
+db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
 
 // INSERT 单行插入
 db->data(['user_name' => 'zhangsan'])->insert('user');

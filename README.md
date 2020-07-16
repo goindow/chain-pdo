@@ -141,7 +141,7 @@ db->order('id desc')->limit(1)->delete('user')
     - order($order)
     - limit($limit)
 ```php
-db->data(['user_name' => 'zhaoliu'])->update('user');
+db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
 ```
 - select($table, $onlyReturnSql = false)
   - 支持的链式条件

@@ -159,6 +159,9 @@ db->where(['user_name' => 'lisi'])->select('user');
 ```
 - count($table, $onlyReturnSql = false)
   - 支持的链式条件
+    - distinct()
+    - join($join)
+    - where($where)
 ```php
 db->where(['status' => 2])->count('user');
 ```

@@ -391,4 +391,12 @@ class TestChainPDO {
         PunitAssert::assertEquals($result[0]['user_id'], $user[0]['id']); 
     }
 
+    /************************    链式 COUNT   ************************/
+
+    public function testCount() {
+        $this->db->data(['user_id', 'price', 'status'], [[1, 100, 1], [1, 100, 2], [1, 100, 2], [2, 100, 1]])->insert('order');
+        $result = $this->db->where(['status' => 2])->count('order');
+        PunitAssert::assertEquals($result, 2);
+    }
+
 }

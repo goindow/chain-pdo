@@ -93,7 +93,7 @@ db->order('id desc')->select('user');
 - limit($limit)
   - UPDATE/DELETE 语句必须是整数(或整数字符串)，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
 ```php
-// UPDATE/DELETE，进能传递整数
+// UPDATE/DELETE，仅能传递整数
 db->order('id desc')->limit(1)->delete('user')
 db->data(['user_name' => 'zhaoliu'])->limit(1)->update('user')
 

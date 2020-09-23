@@ -76,10 +76,11 @@ class TestChainPDO {
             $this->db->commit();
         } catch (Exception $e) {
             $this->db->rollback();
+        } finally {
             $sqlSelect = "SELECT `id` FROM `user`";
             $users = $this->db->sql($sqlSelect);
             PunitAssert::assertEquals(count($users), 0);
-        } 
+        }
     }
 
     public function testBeginTransaction() {
@@ -90,12 +91,13 @@ class TestChainPDO {
             $sqlInsert2 = "INSERT INTO `user` (`user_name`) VALUES ('lisi')";
             $this->db->sql($sqlInsert2);
             $this->db->commit();
+        } catch (Exception $e) {
+            $this->db->rollback();
+        } finally {
             $sqlSelect = "SELECT `id` FROM `user`";
             $users = $this->db->sql($sqlSelect);
             PunitAssert::assertEquals(count($users), 2);
-        } catch (Exception $e) {
-            $this->db->rollback();
-        } 
+        }
     }
 
     /************************    链式 INSERT   ************************/

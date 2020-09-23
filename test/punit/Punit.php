@@ -17,6 +17,9 @@
 // +--------------------------------------------------------------------------------------
 class Punit {
 
+    // 是否显示测试进度，true - 每执行一个 case 都打结果，false - 只在全部 case 执行完打印
+    private $isShowProcessing = true;
+
     // 测试用例目录，只解析当前目录（目录深度一级、不支持迭代解析）的名为 TestXXX.php
     private $caseFilesPath = '';
 
@@ -39,28 +42,6 @@ class Punit {
     public function __construct($caseFilesPath) {
         $this->caseFilesPath = rtrim($caseFilesPath, '/') . '/';
         $this->getCaseFiles();
-    }
-
-    /**
-     * 报告测试结果
-     */
-    public function report() {
-        if (empty($this->report['summary']['total'])) exit("No test cases were found.\n");
-        $report = '';
-        // list
-        foreach ($this->report['list'] as $caseIndex => $caseResult) {
-            if ($caseIndex == 0) $report .= "Result    Time          CaseInfo\n"; 
-            $report .= $caseResult['toString'] . "\n";
-        }
-        // summary
-        $passRate = round($this->report['summary']['pass']/$this->report['summary']['total'], 4) * 100;
-        $failRate = 100 - $passRate;
-        $report .= "\nPass Rate: " . (empty($this->report['summary']['fail']) ? "\033[32m" : "\033[31m") . "{$passRate}%\033[0m"
-                . "    Total/Pass/Fail: {$this->report['summary']['total']}/" 
-                             . "\033[32m{$this->report['summary']['pass']}\033[0m/" 
-                             . "\033[31m{$this->report['summary']['fail']}\033[0m"
-                . "    Time: {$this->report['summary']['time']}\n";
-        exit($report);
     }
 
     /**
@@ -110,6 +91,7 @@ class Punit {
             $this->runCaseBefore($caseFileIndex, $caseFileObject);
             $this->runCase($caseFileIndex, $caseFileObject, $caseIndex); 
             $this->runCaseAfter($caseFileIndex, $caseFileObject);
+            $this->reportLastCase(); 
         }
     }
 
@@ -153,13 +135,49 @@ class Punit {
         $result ? $this->report['summary']['pass']++ : $this->report['summary']['fail']++;
         // 记录明细
         array_push($this->report['list'], [
-            "toString"  => ($result ? "\033[32mpass\033[0m" : "\033[31mfail\033[0m") . "      {$time}      {$case->class}.{$case->name}() {$exception}",
-            "class"     => $case->class, 
-            "method"    => $case->name,
-            "exception" => $exception,
+            "time"      => $time,
             "result"    => $result,
-            "time"      => $time
+            "exception" => $exception,
+            "method"    => $case->name,
+            "class"     => $case->class,
+            "toString"  => sprintf("%-20s%-18s%s.%s() %s", $result ? "\033[32mpass\033[0m" : "\033[31mfail\033[0m", 
+                $time, 
+                $case->class, 
+                $case->name, 
+                $exception
+            )
         ]);
+    }
+
+    /**
+     * 报告最新一条测试用例结果
+     */
+    private function reportLastCase() {
+        if ($this->isShowProcessing) echo end($this->report['list'])['toString'] . "\n";
+    }
+
+    /**
+     * 报告测试结果
+     */
+    private function report() {
+        if (empty($this->report['summary']['total'])) exit("No test cases were found.\n");
+        $report = '';
+        // list
+        if (!$this->isShowProcessing) { // 是否显示测试进度，不显示的情况下，打印明细
+            foreach ($this->report['list'] as $caseIndex => $caseResult) {
+                if ($caseIndex == 0) $report .= $this->getReportHeader();
+                $report .= $caseResult['toString'] . "\n";
+            }
+        }
+        // summary
+        $passRate = round($this->report['summary']['pass']/$this->report['summary']['total'], 4) * 100;
+        $failRate = 100 - $passRate;
+        $report .= "\nPass Rate: " . (empty($this->report['summary']['fail']) ? "\033[32m" : "\033[31m") . "{$passRate}%\033[0m"
+                . "    Total/Pass/Fail: {$this->report['summary']['total']}/" 
+                             . "\033[32m{$this->report['summary']['pass']}\033[0m/" 
+                             . "\033[31m{$this->report['summary']['fail']}\033[0m"
+                . "    Time: {$this->report['summary']['time']}\n";
+        exit($report);
     }
 
     /**
@@ -182,6 +200,11 @@ class Punit {
             ]);
         }
     }
+
+    /**
+     * 获取报告头
+     */
+    private function getReportHeader() { return sprintf("%-11s%-18s%s\n", 'Result', 'Time', 'CaseInfo'); }
 
     /**
      * 计算运行时间

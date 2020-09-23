@@ -91,7 +91,7 @@ class Punit {
             $this->runCaseBefore($caseFileIndex, $caseFileObject);
             $this->runCase($caseFileIndex, $caseFileObject, $caseIndex); 
             $this->runCaseAfter($caseFileIndex, $caseFileObject);
-            $this->reportLastCase(); 
+            $this->reportLastCase($caseFileIndex, $caseIndex); 
         }
     }
 
@@ -152,8 +152,12 @@ class Punit {
     /**
      * 报告最新一条测试用例结果
      */
-    private function reportLastCase() {
-        if ($this->isShowProcessing) echo end($this->report['list'])['toString'] . "\n";
+    private function reportLastCase($caseFileIndex, $caseIndex) {
+        if (!$this->isShowProcessing) return;
+        $report = '';
+        if ($caseFileIndex == 0 && $caseIndex == 0) $report .= $this->getReportHeader();
+        $report .= end($this->report['list'])['toString'] . "\n";
+        echo $report;
     }
 
     /**

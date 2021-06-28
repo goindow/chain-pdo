@@ -19,7 +19,7 @@
 //     'DB_USERNAME' => 'root',
 //     'DB_PASSWORD' => '123456'
 // ];
-// db = ChainPDOFactory::build($configSingle)->getDb();
+// $db = ChainPDOFactory::build($configSingle)->getDb();
 
 $configMulti = [
     [
@@ -35,83 +35,83 @@ $configMulti = [
     ]
 ];
 
-chainPdoFactory =  ChainPDOFactory::build($configMulti);
-db1 = chainPdoFactory->getDb();    // default db index 0 - test1
-db2 = chainPdoFactory->getDb(1);   // db index 1 - test2
+$chainPdoFactory =  ChainPDOFactory::build($configMulti);
+$db1 = $chainPdoFactory->getDb();    // default db index 0 - test1
+$db2 = $chainPdoFactory->getDb(1);   // db index 1 - test2
 ```
 
 ## ChainPDO
 ### 链式条件
 - distinct()
 ```php
-db->distinct()->select('user');
+$db->distinct()->select('user');
 ```
 - field($field)
 ```php
-db->field(['id', 'user_name'])->select('user');    // array
+$db->field(['id', 'user_name'])->select('user');    // array
 
-db->field('id, user_name')->select('user');        // string
+$db->field('id, user_name')->select('user');        // string
 ```
 - join($join)
 ```php
-db->field(['o.id', 'o.price', 'o.status', 'u.id as user_id', 'u.user_name'])
+$db->field(['o.id', 'o.price', 'o.status', 'u.id as user_id', 'u.user_name'])
   ->join('left join user as u on u.id = o.user_id')
   ->select('`order` as o');
 ```
 - where($where)
 ```php
-db->where(['user_name' => 'lisi'])->select('user');    // array
+$db->where(['user_name' => 'lisi'])->select('user');    // array
 
-db->where("user_name like '%an%'")->select('user');    // string
+$db->where("user_name like '%an%'")->select('user');    // string
 ```
 - group($group)
 ```php
-db->field(['user_id', 'status', 'sum(price) as price'])
+$db->field(['user_id', 'status', 'sum(price) as price'])
   ->group(['user_id', 'status'])
   ->select('order');    // array
 
-db->field(['user_id', 'status', 'sum(price) as price'])
+$db->field(['user_id', 'status', 'sum(price) as price'])
   ->group('user_id,status')
   ->select('order');    // string
 ```
 - having($having)
 ```php
-db->field(['user_id', 'status', 'sum(price) as price'])
+$db->field(['user_id', 'status', 'sum(price) as price'])
   ->group(['user_id', 'status'])
   ->having(['price' => 100])
   ->select('order');    // array
 
-db->field(['user_id', 'status', 'sum(price) as price'])
+$db->field(['user_id', 'status', 'sum(price) as price'])
   ->group(['user_id', 'status'])
   ->having('price >= 200')
   ->select('order');    // string
 ```
 - order($order)
 ```php
-db->order('id desc')->select('user');
+$db->order('id desc')->select('user');
 ```
 - limit($limit)
   - UPDATE/DELETE 语句必须是整数(或整数字符串)，只支持 'Limit n'，不支持 'Limit offset,n'，否则 SQL 报语法错误
 ```php
 // UPDATE/DELETE，仅能传递整数
-db->order('id desc')->limit(1)->delete('user')
-db->data(['user_name' => 'zhaoliu'])->limit(1)->update('user')
+$db->order('id desc')->limit(1)->delete('user')
+$db->data(['user_name' => 'zhaoliu'])->limit(1)->update('user')
 
 // SELECT
-db->limit('3,1')->select('user');
+$db->limit('3,1')->select('user');
 ```
   - data($dataOrFields, $data = [])
 ```php
 // UPDATE
-db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
+$db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
 
 // INSERT 单行插入
-db->data(['user_name' => 'zhangsan'])->insert('user');
+$db->data(['user_name' => 'zhangsan'])->insert('user');
 
 // INSERT 批量插入
 $fields = ['id', 'user_name'];
 $users = [[1, 'zhangsan'], [2, 'lisi'], [3, 'wangwu']];
-db->data($fields, $users)->insert('user');
+$db->data($fields, $users)->insert('user');
 ```
 ### 链式 CURD
 - insert($table, $onlyReturnSql = false)
@@ -119,12 +119,12 @@ db->data($fields, $users)->insert('user');
     - data($dataOrFields, $data = [])
 ```php
 // INSERT 单行插入
-db->data(['user_name' => 'zhangsan'])->insert('user');
+$db->data(['user_name' => 'zhangsan'])->insert('user');
 
 // INSERT 批量插入
 $fields = ['id', 'user_name'];
 $users = [[1, 'zhangsan'], [2, 'lisi'], [3, 'wangwu']];
-db->data($fields, $users)->insert('user');
+$db->data($fields, $users)->insert('user');
 ```
 - delete($table, $onlyReturnSql = false)
   - 支持的链式条件
@@ -132,7 +132,7 @@ db->data($fields, $users)->insert('user');
     - order($order)
     - limit($limit)
 ```php
-db->order('id desc')->limit(1)->delete('user')
+$db->order('id desc')->limit(1)->delete('user')
 ```
 - update($table, $onlyReturnSql = false)
   - 支持的链式条件
@@ -141,7 +141,7 @@ db->order('id desc')->limit(1)->delete('user')
     - order($order)
     - limit($limit)
 ```php
-db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
+$db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update('user');
 ```
 - select($table, $onlyReturnSql = false)
   - 支持的链式条件
@@ -155,7 +155,7 @@ db->data(['user_name' => 'zhaoliu'])->where(['user_name' => 'zhangsan'])->update
     - limit($limit)
     - data($dataOrFields, [])
 ```php
-db->where(['user_name' => 'lisi'])->select('user');
+$db->where(['user_name' => 'lisi'])->select('user');
 ```
 - count($table, $onlyReturnSql = false)
   - 支持的链式条件
@@ -163,30 +163,30 @@ db->where(['user_name' => 'lisi'])->select('user');
     - join($join)
     - where($where)
 ```php
-db->where(['status' => 2])->count('user');
+$db->where(['status' => 2])->count('user');
 ```
 ### 原生 sql
 - sql($sql)
 ```php
 $sql = "INSERT INTO `user` (`user_name`) VALUES ('zhangsan')";
-$insertId = db->sql($sql);
+$insertId = $db->sql($sql);
 ```
 ### 事务
 - beginTransaction()
 - commit()
 - rollback()
 ```php
-db->beginTransaction();
+$db->beginTransaction();
 try {
     $sqlInsert1 = "INSERT INTO `user` (`user_name`) VALUES ('zhangsan')";
-    db->sql($sqlInsert1);
+    $db->sql($sqlInsert1);
 
     $sqlInsert2 = "INSERT INTO `user` (`user_name`) VALUES ('lisi')";
-    db->sql($sqlInsert2);
+    $db->sql($sqlInsert2);
     
-    db->commit();    
+    $db->commit();    
 } catch (Exception $e) {
-    db->rollback();
+    $db->rollback();
 } 
 ```
 
